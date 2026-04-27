@@ -1,0 +1,41 @@
+name: Docker Compose Validation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Загружаем код из репозитория
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Создаем .env из примера
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      # 3. Проверка синтаксиса (docker compose config)
+      - name: Check compose syntax
+        run: docker compose config
+
+      # 4. Запуск проекта (docker compose up -d)
+      - name: Spin up containers
+        run: docker compose up -d
+
+      # 5. Даем базе данных время прогрузиться (важно для healthcheck)
+      - name: Wait for services
+        run: sleep 20
+
+      # 6. Проверка доступности (curl)
+      - name: Check WordPress availability
+        run: |
+          curl -f http://localhost:8080 || (docker compose ps && exit 1)
+
+      # 7. Остановка и очистка
+      - name: Docker compose down
+        run: docker compose down
